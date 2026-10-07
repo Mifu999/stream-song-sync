@@ -1,0 +1,52 @@
+{
+    "geode": "5.10.1",
+    "gd": {
+        "win":     "2.2081"
+    },
+    "id": "mifu.stream-song-sync",
+    "name": "Stream Song Sync",
+    "version": "v0.1.0",
+    "developer": "Mifuu",
+    "description": "Plays a second, copyright-safe track on its own audio device, kept in sync with the level song (start + every restart), so you can route it into OBS instead of the real track.",
+    "tags": ["utility", "enhancement"],
+    "settings": {
+        "main-title": {
+            "name": "Stream Song Sync",
+            "description": "v1: normal-mode sync only. Practice-mode checkpoint sync is experimental (see below) because GD itself has known music-sync quirks in practice mode.",
+            "type": "title"
+        },
+        "enabled": {
+            "name": "Enabled",
+            "description": "Master on/off switch.",
+            "type": "bool",
+            "default": false
+        },
+        "secondary-track": {
+            "name": "Replacement track",
+            "description": "The copyright-safe audio file to play instead, routed to the output device below.",
+            "type": "file",
+            "default": "",
+            "control": {
+                "dialog": "open",
+                "filters": [
+                    { "files": ["*.mp3", "*.wav", "*.ogg", "*.flac"], "description": "Audio files" }
+                ]
+            }
+        },
+        "output-device-index": {
+            "name": "Output device index",
+            "description": "FMOD driver index for the replacement track's OWN output (e.g. a virtual cable like VB-Audio or Voicemeeter Input), so it stays off your real speakers and only reaches OBS. Run the game once with this mod enabled, open the Geode console, and read the numbered device list it prints at startup to find the right index.",
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "max": 64
+        },
+        "resync-on-checkpoint": {
+            "name": "Resync on checkpoint restore (experimental)",
+            "description": "Also resync when restoring a practice-mode checkpoint, not just on a full death/restart. GD's own practice-mode music sync has known edge cases (see Misc Bugfixes' PracticeMusicSyncPulseFix) that this inherits. Off by default for v1 — test it before trusting it on stream.",
+            "type": "bool",
+            "default": false,
+            "enable-if": "enabled"
+        }
+    }
+}
