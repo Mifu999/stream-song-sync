@@ -1,4 +1,4 @@
-# Stream Song Sync — v0.1.0 (first pass, unbuilt)
+# Stream Song Sync — v0.1.1 (real CI build run, one bug found and fixed)
 
 Answers the idea from the tweet: play a second, copyright-safe track on its own audio output
 (a virtual cable), kept in sync with the real level song's start point and every restart, so
@@ -6,10 +6,33 @@ OBS can capture that device instead of the real one while you still hear the ori
 
 ## Status — read before building
 
-**Nothing here has been compiled or run.** This sandbox has no Windows/MSVC toolchain, no
-installed Geode SDK, and no copy of Geometry Dash, so there was no way to actually build or
-test it. Everything below is accurate to the sources checked (see "What was verified"), but
-you are the first build.
+**A real build has now run**, via the GitHub Actions workflow
+(`geode-sdk/build-geode-mod@main`, Windows runner) on `Mifu999/stream-song-sync`. This sandbox
+still has no Windows/MSVC toolchain itself, so that CI run is the only real compile this mod
+has had — but it got much further than "unbuilt": `mod.json`'s `"geode": "5.9.0"` correctly
+drove the SDK install, CMake configured cleanly, and 32 of 33 ninja steps compiled, including
+`main.cpp`, `FMODAudioEngine.cpp`, and `PlayLayer.cpp` — i.e. every hook signature, every
+`getSettingValue<...>` call, and the `#include <fmod.hpp>` path (previously flagged as
+unverified) are all now confirmed correct on a real toolchain.
+
+One file failed: `SecondaryAudioEngine.cpp`, on a single bad helper call (`FMOD_ErrorString`,
+see "Build #1 fix" below). That's been fixed here, but **the fix itself hasn't been through CI
+yet** — next build should be the first clean one.
+
+### Build #1 fix: `FMOD_ErrorString` doesn't exist in Geode's bundled header
+
+The error logging helper in `SecondaryAudioEngine.cpp` originally called `FMOD_ErrorString(r)`
+to turn an `FMOD_RESULT` into a readable string. That symbol lives in FMOD's own
+`fmod_errors.h`, which is **not** part of what Geode bundles under `Geode/fmod` — a distinction
+the earlier draft got wrong by pulling the helper from a reference copy of `fmod.hpp` in a
+different skill, instead of confirming it against what a real Geode project actually sees.
+
+Clang reported this as two errors, but it's one bug: once `FMOD_ErrorString` failed to resolve,
+Clang's typo-correction silently substituted the unrelated OpenGL symbol `gluErrorString`
+("did you mean..."), whose return type (`const unsigned char*`) then failed `fmt`'s
+`static_assert` against formatting raw non-char pointers — a second, confusing error from the
+same root cause. Fix: log the raw `(int)` `FMOD_RESULT` code instead of a string; every other
+`log::` call site in the project was re-checked for the same pattern and is clean.
 
 ## What was verified, and how
 
@@ -44,10 +67,9 @@ by robots.txt, `api.github.com` with an HTTP 403 — which is exactly the untest
 stable classes, so this is unlikely to matter, but re-run the Step 0 check yourself before
 relying on this for anything you'd ship.
 
-**Not checked at all:** whether `#include <fmod.hpp>` is literally the include path a real
-Geode project needs (vs. some other path, or an extra CMake step) — I know of no such step from
-anything in the skills, but it's the one line in this scaffold I have zero direct evidence for.
-First build will tell you immediately if it's wrong.
+**Now confirmed by the real build:** `#include <fmod.hpp>` is exactly right — no extra CMake
+step needed. That was the one line in the first draft with zero direct evidence behind it;
+the CI compiler accepted it without complaint across every file that uses it.
 
 ## How it works
 

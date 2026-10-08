@@ -7,9 +7,15 @@ namespace streamsongsync {
 
 namespace {
     // Thin wrapper so every FMOD call logs the same way on failure.
+    //
+    // No FMOD_ErrorString() here: it lives in FMOD's own fmod_errors.h, which
+    // isn't part of what Geode bundles under Geode/fmod (confirmed by a real
+    // build failing on it — "did you mean gluErrorString" was Clang grabbing
+    // an unrelated OpenGL symbol once the real one didn't resolve). The int
+    // code is enough to look up in FMOD_RESULT's enum by hand if needed.
     bool check(FMOD_RESULT r, char const* what) {
         if (r != FMOD_OK) {
-            log::error("[StreamSongSync] {} failed: {} ({})", what, FMOD_ErrorString(r), (int)r);
+            log::error("[StreamSongSync] {} failed: FMOD_RESULT {}", what, (int)r);
             return false;
         }
         return true;
